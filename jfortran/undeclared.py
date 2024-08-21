@@ -38,25 +38,27 @@ def remove_string_literals(line):
     # Optionally, you can extend this to handle double-quoted strings if used:
     # return re.sub(r"['\"].*?['\"]", '', line)
 
+
 import re
 
 def find_undeclared_variables(file_path, known_variables):
     """
     Scans the file for variables that are used but not declared, ignoring comments, string literals,
     FORMAT statements, and Fortran logical operators. Variables before the `implicit` statement are considered "ok".
+    Returns a dictionary where the keys are undeclared variables and values are the lines where they are used.
     """
     try:
         with open(file_path, 'r') as file:
             lines = file.readlines()
     except FileNotFoundError:
         print(f"Error: The file '{file_path}' was not found.")
-        return set()
+        return {}
 
-    undeclared_variables = set()
+    undeclared_variables = {}
     variable_pattern = re.compile(r'\b([a-zA-Z]\w*)\b')
     implicit_found = False
 
-    for line in lines:
+    for i, line in enumerate(lines, start=1):  # Enumerate lines with line numbers starting at 1
         # Skip entire line if it's a comment or FORMAT statement
         if line.strip().startswith('!') or is_format_statement(line):
             continue
@@ -85,7 +87,9 @@ def find_undeclared_variables(file_path, known_variables):
                 known_variables.add(var_lower)
             # After implicit, check for undeclared variables
             elif var_lower not in known_variables and not is_fortran_keyword(var_lower) and not is_common_block(line):
-                undeclared_variables.add(var_lower)
+                if var_lower not in undeclared_variables:
+                    undeclared_variables[var_lower] = []
+                undeclared_variables[var_lower].append(i)  # Append the line number
 
     return undeclared_variables
 
@@ -114,7 +118,7 @@ def is_fortran_keyword(word):
     
     # Add logical operators and other intrinsic functions
     fortran_logical_operators = {
-        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.'
+        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.', '.true.', '.false.'
     }
     
     # Add format specifiers (common ones, you can extend this as needed)

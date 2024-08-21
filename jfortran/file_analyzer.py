@@ -1,15 +1,5 @@
 import argparse
-from variable_collector import (
-    collect_declared_variables, 
-    collect_parameter_variables, 
-    collect_common_blocks, 
-    collect_data_initializations
-)
-from undeclared import (
-    collect_known_variables,
-    find_undeclared_variables
-)
-import re
+from undeclared import collect_known_variables, find_undeclared_variables
 
 def main():
     parser = argparse.ArgumentParser(description="Fortran Variable Declaration, Parameter, Common Block, Data Statement, and Undeclared Variable Analyzer")
@@ -23,11 +13,12 @@ def main():
     # Find undeclared variables
     undeclared_variables = find_undeclared_variables(args.file, known_variables)
 
-    # Print undeclared variables
+    # Print undeclared variables with line numbers
     if undeclared_variables:
         print("\nUndeclared variables found:")
-        for var in sorted(undeclared_variables):
-            print(f"Variable '{var}' is used but not declared.")
+        for var, lines in sorted(undeclared_variables.items()):
+            line_info = ', '.join(str(line) for line in lines)
+            print(f"Variable '{var}' is used but not declared. Found on line(s): {line_info}")
     else:
         print("No undeclared variables found.")
 
