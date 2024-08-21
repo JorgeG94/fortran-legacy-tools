@@ -231,6 +231,7 @@ class TestVariableCollector(unittest.TestCase):
 
     def test_find_undeclared_variables(self):
         file_content = """\
+        implicit double precision(A-H,O-Z)
         integer a, b
         parameter (c=1)
         common /block1/ d, e, f
@@ -277,6 +278,30 @@ class TestVariableCollector(unittest.TestCase):
         self.assertFalse(is_fortran_keyword('customSubroutine'))
         self.assertFalse(is_fortran_keyword('myfunction'))
         self.assertFalse(is_fortran_keyword('.customOp.'))
+def test_logical_operators_handling(self):
+    file_content = """\
+    implicit double precision (a-h,o-z)
+    if (maswrk.and.exetyp.ne.expert) then
+        call something()
+    endif
+    """
+    with open('test_logical_operators_handling.f90', 'w') as f:
+        f.write(file_content)
+
+    known_variables = collect_known_variables('test_logical_operators_handling.f90')
+    expected_undeclared_variables = set()  # Assuming these variables are declared correctly elsewhere
+
+    self.assertEqual(find_undeclared_variables('test_logical_operators_handling.f90', known_variables), expected_undeclared_variables)
+def test_format_specifiers_handling(self):
+    format_specifiers = ['i8', 'a10', 'f12.5', 'x', '1x', 'l', 'd20']
+    
+    for specifier in format_specifiers:
+        self.assertTrue(is_fortran_keyword(specifier))
+    
+    # Test non-format specifiers
+    self.assertFalse(is_fortran_keyword('i_variable'))
+    self.assertFalse(is_fortran_keyword('f1234x'))
+
 
 if __name__ == '__main__':
     unittest.main()

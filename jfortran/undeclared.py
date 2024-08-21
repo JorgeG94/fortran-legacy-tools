@@ -42,8 +42,8 @@ import re
 
 def find_undeclared_variables(file_path, known_variables):
     """
-    Scans the file for variables that are used but not declared, ignoring comments, string literals, 
-    FORMAT statements, and Fortran logical operators.
+    Scans the file for variables that are used but not declared, ignoring comments, string literals,
+    FORMAT statements, and Fortran logical operators. Variables before the `implicit` statement are considered "ok".
     """
     try:
         with open(file_path, 'r') as file:
@@ -53,14 +53,18 @@ def find_undeclared_variables(file_path, known_variables):
         return set()
 
     undeclared_variables = set()
-
-    # Regex to match logical operators and skip them
-    logical_operators_pattern = re.compile(r'\.\s*(and|or|not|eq|ne|lt|le|gt|ge|eqv|neqv)\s*\.', re.IGNORECASE)
+    variable_pattern = re.compile(r'\b([a-zA-Z]\w*)\b')
+    implicit_found = False
 
     for line in lines:
         # Skip entire line if it's a comment or FORMAT statement
         if line.strip().startswith('!') or is_format_statement(line):
             continue
+
+        # Check for implicit statement
+        if re.search(r'implicit\s+', line, re.IGNORECASE):
+            implicit_found = True
+            continue  # Move to next line after finding implicit
 
         # Remove inline comments
         line = line.split('!')[0]
@@ -68,16 +72,20 @@ def find_undeclared_variables(file_path, known_variables):
         # Remove string literals
         line = remove_string_literals(line)
 
-        # Remove logical operators from the line
-        line = logical_operators_pattern.sub('', line)
+        # Replace logical operators with spaces to prevent variable concatenation
+        logical_operators_pattern = re.compile(r'\.\s*(and|or|not|eq|ne|lt|le|gt|ge|eqv|neqv)\s*\.', re.IGNORECASE)
+        line = logical_operators_pattern.sub(' ', line)
 
         # Find all variables in the line
-        variable_pattern = re.compile(r'\b([a-zA-Z]\w*)\b')
         matches = variable_pattern.findall(line)
         for var in matches:
-            # If variable is not in known_variables, not a Fortran keyword, and not a common block name, add to undeclared
-            if var.lower() not in known_variables and not is_fortran_keyword(var) and not is_common_block(line):
-                undeclared_variables.add(var)
+            var_lower = var.lower()
+            # Before implicit, add variables to known_variables
+            if not implicit_found:
+                known_variables.add(var_lower)
+            # After implicit, check for undeclared variables
+            elif var_lower not in known_variables and not is_fortran_keyword(var_lower) and not is_common_block(line):
+                undeclared_variables.add(var_lower)
 
     return undeclared_variables
 
@@ -93,10 +101,9 @@ def is_common_block(line):
     Checks if a line is declaring a common block.
     """
     return bool(re.match(r'^\s*common\s*/', line, re.IGNORECASE))
-
 def is_fortran_keyword(word):
     """
-    Checks if a word is a Fortran keyword or logical operator to avoid false positives.
+    Checks if a word is a Fortran keyword, logical operator, or format specifier to avoid false positives.
     """
     fortran_keywords = {
         'do', 'if', 'then', 'else', 'elseif', 'end', 'subroutine', 'function', 'program', 'module',
@@ -104,14 +111,23 @@ def is_fortran_keyword(word):
         'parameter', 'common', 'dimension', 'logical', 'integer', 'real', 'character', 'complex',
         'double', 'precision', 'implicit', 'none', 'data', 'contains', 'external', 'intrinsic'
     }
-
+    
     # Add logical operators and other intrinsic functions
     fortran_logical_operators = {
         '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.'
     }
-
-    # Combine both sets
+    
+    # Add format specifiers (common ones, you can extend this as needed)
+    fortran_format_specifiers = {
+        'i', 'f', 'e', 'g', 'a', 'l', 'd', 'x', '1x', 'h'
+    }
+    
+    # Combine all keywords, logical operators, and format specifiers
     all_fortran_keywords = fortran_keywords.union(fortran_logical_operators)
+
+    # Check if the word matches a format specifier with a number (like i8, f12.5, etc.)
+    if any(word.lower().startswith(fmt) and word.lower()[len(fmt):].isdigit() for fmt in fortran_format_specifiers):
+        return True
 
     return word.lower() in all_fortran_keywords
 
