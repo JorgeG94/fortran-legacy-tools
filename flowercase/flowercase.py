@@ -32,46 +32,79 @@ Usage: file name as first command line parameter
 # ylikx.0 at gmail
 # https://www.github.com/ylikx/
 
-from __future__ import print_function
-
+#from __future__ import print_function
 import sys
+import os
+import argparse
 
-infile = open(sys.argv[1], 'r')
+def convert_to_lowercase(stream):
+    """Convert all uppercase keywords in the Fortran source file to lowercase."""
+    commentmode = False
+    stringmode = False
+    stringchar = ''
 
-commentmode = False
-stringmode = False
-stringchar = ''
+    for line in stream:
+        line_new = ''
+        word = ''
+        commentmode = False
 
+        for character in line:
+            if not character.isalnum() and character != '_':
+                if not stringmode and not commentmode:
+                    if word.isupper():  # means: do not convert mixed case words
+                        word = word.lower()
 
-for line in infile:
-  line_new = ''
-  word = ''
-  commentmode = False
+                line_new += word
+                line_new += character
+                word = ''
 
-  for character in line:
-    if not character.isalnum() and character != '_':
+                if (character == '"' or character == "'") and not commentmode:
+                    if not stringmode:
+                        stringchar = character
+                        stringmode = True
+                    else:
+                        stringmode = not (character == stringchar)
 
-      if not stringmode and not commentmode:
-        if word.isupper(): # means: do not convert mixed case words
-          word = word.lower()
+                if character == '!' and not stringmode:
+                    commentmode = True  # treat rest of line as comment
 
-      line_new += word
-      line_new += character
-      word = ''
+            else:
+                word += character
 
-      if (character == '"' or character == "'") and not commentmode:
-        if not stringmode:
-          stringchar = character
-          stringmode = True
+        line_new += word
+        yield line_new
+
+def main():
+    parser = argparse.ArgumentParser(description="Convert Fortran file keywords to lowercase.")
+    parser.add_argument("input_file", help="Input Fortran file.")
+    parser.add_argument("-i", "--inplace", action="store_true", help="Edit the file in place.")
+    parser.add_argument("-o", "--output", help="Redirect to an output file (default: converted_<input_file>.f90 or .F90).")
+
+    args = parser.parse_args()
+
+    input_file = args.input_file
+    output_file = args.output
+
+    if not output_file:
+        base_name, suffix = os.path.splitext(input_file)
+        if suffix in [".f", ".F"]:
+            output_suffix = ".f90" if suffix == ".f" else ".F90"
+            output_file = f"converted_{os.path.basename(base_name)}{output_suffix}"
         else:
-          stringmode = not (character == stringchar)
+            output_file = f"converted_{os.path.basename(base_name)}{suffix}"
 
-      if character == '!' and not stringmode:
-        commentmode = True # treat rest of line as comment
+    with open(input_file, 'r') as infile:
+        converted_lines = list(convert_to_lowercase(infile))
 
+    if args.inplace:
+        with open(input_file, 'w') as outfile:
+            outfile.writelines(converted_lines)
     else:
-      word += character
+        with open(output_file, 'w') as outfile:
+            outfile.writelines(converted_lines)
 
-  print(line_new, end="")
+    print(f"Conversion completed. Output written to {output_file if not args.inplace else input_file}.")
 
-infile.close()
+if __name__ == "__main__":
+    main()
+
