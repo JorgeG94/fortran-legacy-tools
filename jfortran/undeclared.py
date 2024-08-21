@@ -38,9 +38,12 @@ def remove_string_literals(line):
     # Optionally, you can extend this to handle double-quoted strings if used:
     # return re.sub(r"['\"].*?['\"]", '', line)
 
+import re
+
 def find_undeclared_variables(file_path, known_variables):
     """
-    Scans the file for variables that are used but not declared, ignoring comments and string literals.
+    Scans the file for variables that are used but not declared, ignoring comments, string literals, 
+    FORMAT statements, and Fortran logical operators.
     """
     try:
         with open(file_path, 'r') as file:
@@ -50,20 +53,26 @@ def find_undeclared_variables(file_path, known_variables):
         return set()
 
     undeclared_variables = set()
-    variable_pattern = re.compile(r'\b([a-zA-Z]\w*)\b')  # Matches any word that starts with a letter
+
+    # Regex to match logical operators and skip them
+    logical_operators_pattern = re.compile(r'\.\s*(and|or|not|eq|ne|lt|le|gt|ge|eqv|neqv)\s*\.', re.IGNORECASE)
 
     for line in lines:
-        # Skip entire line if it's a comment
-        if line.strip().startswith('!'):
+        # Skip entire line if it's a comment or FORMAT statement
+        if line.strip().startswith('!') or is_format_statement(line):
             continue
-        
+
         # Remove inline comments
         line = line.split('!')[0]
 
         # Remove string literals
         line = remove_string_literals(line)
 
+        # Remove logical operators from the line
+        line = logical_operators_pattern.sub('', line)
+
         # Find all variables in the line
+        variable_pattern = re.compile(r'\b([a-zA-Z]\w*)\b')
         matches = variable_pattern.findall(line)
         for var in matches:
             # If variable is not in known_variables, not a Fortran keyword, and not a common block name, add to undeclared
@@ -71,6 +80,13 @@ def find_undeclared_variables(file_path, known_variables):
                 undeclared_variables.add(var)
 
     return undeclared_variables
+
+
+def is_format_statement(line):
+    """
+    Checks if a line is a FORMAT statement.
+    """
+    return bool(re.match(r'^\s*\d+\s*format\s*\(.*\)', line, re.IGNORECASE))
 
 def is_common_block(line):
     """
@@ -80,7 +96,7 @@ def is_common_block(line):
 
 def is_fortran_keyword(word):
     """
-    Checks if a word is a Fortran keyword to avoid false positives.
+    Checks if a word is a Fortran keyword or logical operator to avoid false positives.
     """
     fortran_keywords = {
         'do', 'if', 'then', 'else', 'elseif', 'end', 'subroutine', 'function', 'program', 'module',
@@ -88,4 +104,14 @@ def is_fortran_keyword(word):
         'parameter', 'common', 'dimension', 'logical', 'integer', 'real', 'character', 'complex',
         'double', 'precision', 'implicit', 'none', 'data', 'contains', 'external', 'intrinsic'
     }
-    return word.lower() in fortran_keywords
+
+    # Add logical operators and other intrinsic functions
+    fortran_logical_operators = {
+        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.'
+    }
+
+    # Combine both sets
+    all_fortran_keywords = fortran_keywords.union(fortran_logical_operators)
+
+    return word.lower() in all_fortran_keywords
+

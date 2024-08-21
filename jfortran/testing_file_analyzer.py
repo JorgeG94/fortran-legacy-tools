@@ -239,6 +239,8 @@ class TestVariableCollector(unittest.TestCase):
         x = a + b + c
         y = d + e + f
         z = g + h
+        9001 format(' EXECUTION OF GAMESS BEGUN ',3a8)
+        9002 format(' EXECUTION OF GAMESS TERMINATED NORMALLY ',3a8)
         """
         with open('test_find_undeclared_variables.f90', 'w') as f:
             f.write(file_content)
@@ -248,12 +250,33 @@ class TestVariableCollector(unittest.TestCase):
 
         self.assertEqual(find_undeclared_variables('test_find_undeclared_variables.f90', known_variables), expected_undeclared_variables)
 
+
     def test_is_fortran_keyword(self):
+        # Test basic Fortran keywords
         self.assertTrue(is_fortran_keyword('if'))
         self.assertTrue(is_fortran_keyword('do'))
         self.assertTrue(is_fortran_keyword('then'))
+        self.assertTrue(is_fortran_keyword('subroutine'))
+        self.assertTrue(is_fortran_keyword('module'))
+        
+        # Test logical and relational operators
+        self.assertTrue(is_fortran_keyword('.and.'))
+        self.assertTrue(is_fortran_keyword('.or.'))
+        self.assertTrue(is_fortran_keyword('.not.'))
+        self.assertTrue(is_fortran_keyword('.eq.'))
+        self.assertTrue(is_fortran_keyword('.ne.'))
+        self.assertTrue(is_fortran_keyword('.lt.'))
+        self.assertTrue(is_fortran_keyword('.le.'))
+        self.assertTrue(is_fortran_keyword('.gt.'))
+        self.assertTrue(is_fortran_keyword('.ge.'))
+        self.assertTrue(is_fortran_keyword('.eqv.'))
+        self.assertTrue(is_fortran_keyword('.neqv.'))
+        
+        # Test non-Fortran words
         self.assertFalse(is_fortran_keyword('variable'))
         self.assertFalse(is_fortran_keyword('customSubroutine'))
+        self.assertFalse(is_fortran_keyword('myfunction'))
+        self.assertFalse(is_fortran_keyword('.customOp.'))
 
 if __name__ == '__main__':
     unittest.main()
