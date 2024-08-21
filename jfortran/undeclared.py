@@ -149,3 +149,23 @@ def is_fortran_keyword(word):
 
     return word.lower() in all_fortran_keywords
 
+def check_proper_type_declaration(declared_variables, common_blocks, parameter_variables, data_initializations):
+    """
+    Checks if variables in common blocks, parameter statements, and data statements have proper type declarations.
+    Returns a set of variables that are missing type declarations.
+    """
+    missing_declarations = set()
+
+    # Combine all variables from common blocks, parameter statements, and data initializations
+    all_vars_to_check = set(parameter_variables.keys())
+    for block_vars in common_blocks.values():
+        all_vars_to_check.update(block_vars)
+    all_vars_to_check.update(data_initializations.keys())
+
+    # Cross-reference with declared variables
+    for var in all_vars_to_check:
+        if var.lower() not in declared_variables:
+            missing_declarations.add(var)
+
+    return missing_declarations
+
