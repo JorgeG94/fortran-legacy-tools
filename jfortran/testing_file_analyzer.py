@@ -311,7 +311,6 @@ class TestVariableCollector(unittest.TestCase):
         self.assertFalse(is_fortran_keyword('i_variable'))
         self.assertFalse(is_fortran_keyword('f1234x'))
 
-
 '''
     def test_collect_common_blocks_handling(self):
         file_content = """\
@@ -326,7 +325,6 @@ class TestVariableCollector(unittest.TestCase):
 
         self.assertEqual(collect_common_blocks('test_common_blocks_handling.f90'), expected_common_blocks)
 '''
-
 if __name__ == '__main__':
     unittest.main()
 
