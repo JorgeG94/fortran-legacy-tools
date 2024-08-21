@@ -16,7 +16,8 @@ def process_fortran_file(filepath):
 
     for line in lines:
         subroutine_match = re.match(r'^(\s*)subroutine\s+(\w+)', line, re.IGNORECASE)
-        function_match = re.match(r'^(\s*)function\s+(\w+)', line, re.IGNORECASE)
+        # Updated to match functions with a type prefix
+        function_match = re.match(r'^(\s*)((?:integer|real|double\s+precision|logical|character)\s+)?function\s+(\w+)', line, re.IGNORECASE)
         module_match = re.match(r'^(\s*)module\s+(?!procedure\b)(\w+)', line, re.IGNORECASE)
         end_subroutine_match = re.match(r'^(\s*)end\s+subroutine\s*(\w*)', line, re.IGNORECASE)
         end_function_match = re.match(r'^(\s*)end\s+function\s*(\w*)', line, re.IGNORECASE)
@@ -31,7 +32,7 @@ def process_fortran_file(filepath):
         if function_match:
             inside_function = True
             inside_subroutine = False
-            current_function_name = function_match.group(2)
+            current_function_name = function_match.group(3)
             current_indent = function_match.group(1)
 
         if module_match:
@@ -53,8 +54,7 @@ def process_fortran_file(filepath):
             if not end_function_match.group(2):
                 line = f'{end_function_match.group(1)}end function {current_function_name}\n'
             inside_function = False
-
-        # If inside a module and the subroutine/function is ending
+                    # If inside a module and the subroutine/function is ending
         if inside_module:
             if inside_subroutine and end_subroutine_match:
                 if not end_subroutine_match.group(2):
@@ -69,6 +69,7 @@ def process_fortran_file(filepath):
 
     with open(filepath, 'w') as file:
         file.writelines(modified_lines)
+
 
 def replace_generic_end(filepath):
     with open(filepath, 'r') as file:
