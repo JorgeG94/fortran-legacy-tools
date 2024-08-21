@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # flowercase.py: Conversion of Fortran code from traditional all
 #                uppercase source to more readable lowercase.
 #
