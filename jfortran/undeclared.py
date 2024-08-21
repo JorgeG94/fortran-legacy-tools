@@ -38,13 +38,10 @@ def remove_string_literals(line):
     # Optionally, you can extend this to handle double-quoted strings if used:
     # return re.sub(r"['\"].*?['\"]", '', line)
 
-
-import re
-
 def find_undeclared_variables(file_path, known_variables):
     """
     Scans the file for variables that are used but not declared, ignoring comments, string literals,
-    FORMAT statements, and Fortran logical operators. Variables before the `implicit` statement are considered "ok".
+    FORMAT statements, Fortran logical operators, and subroutine names in CALL statements.
     Returns a dictionary where the keys are undeclared variables and values are the lines where they are used.
     """
     try:
@@ -78,7 +75,23 @@ def find_undeclared_variables(file_path, known_variables):
         logical_operators_pattern = re.compile(r'\.\s*(and|or|not|eq|ne|lt|le|gt|ge|eqv|neqv)\s*\.', re.IGNORECASE)
         line = logical_operators_pattern.sub(' ', line)
 
-        # Find all variables in the line
+        # Check for subroutine calls and handle them
+        if "call" in line.lower():
+            subroutine_call_pattern = re.compile(r'\bcall\s+([a-zA-Z]\w*)\s*\((.*)\)', re.IGNORECASE)
+            match = subroutine_call_pattern.search(line)
+            if match:
+                subroutine_name = match.group(1)  # The subroutine name (e.g., 'a')
+                arguments = match.group(2)  # The arguments inside the parentheses (e.g., 'x')
+                argument_vars = variable_pattern.findall(arguments)
+                for arg in argument_vars:
+                    arg_lower = arg.lower()
+                    if implicit_found and arg_lower not in known_variables and not is_fortran_keyword(arg_lower):
+                        if arg_lower not in undeclared_variables:
+                            undeclared_variables[arg_lower] = []
+                        undeclared_variables[arg_lower].append(i)
+            continue  # Skip to the next line
+
+        # Find all other variables in the line
         matches = variable_pattern.findall(line)
         for var in matches:
             var_lower = var.lower()
@@ -118,7 +131,8 @@ def is_fortran_keyword(word):
     
     # Add logical operators and other intrinsic functions
     fortran_logical_operators = {
-        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.', '.true.', '.false.', 'abrt'
+        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.', '.true.', '.false.', 'abrt',
+        'endif', 'goto', 'ifdef'
     }
     
     # Add format specifiers (common ones, you can extend this as needed)
