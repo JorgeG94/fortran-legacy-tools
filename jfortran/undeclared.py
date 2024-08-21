@@ -118,7 +118,7 @@ def is_fortran_keyword(word):
     
     # Add logical operators and other intrinsic functions
     fortran_logical_operators = {
-        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.', '.true.', '.false.'
+        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.', '.true.', '.false.', 'abrt'
     }
     
     # Add format specifiers (common ones, you can extend this as needed)
