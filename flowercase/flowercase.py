@@ -31,11 +31,13 @@ Usage: file name as first command line parameter
 # Let me know when you find this script useful:
 # ylikx.0 at gmail
 # https://www.github.com/ylikx/
-
-#from __future__ import print_function
 import sys
 import os
 import argparse
+
+def is_hollerith_constant(word):
+    """Check if a word is a Hollerith constant."""
+    return len(word) > 1 and word[0].isdigit() and word[1].lower() == 'h'
 
 def convert_to_lowercase(stream):
     """Convert all uppercase keywords in the Fortran source file to lowercase."""
@@ -51,7 +53,7 @@ def convert_to_lowercase(stream):
         for character in line:
             if not character.isalnum() and character != '_':
                 if not stringmode and not commentmode:
-                    if word.isupper():  # means: do not convert mixed case words
+                    if word.isupper() and not is_hollerith_constant(word):  # don't convert Hollerith constants
                         word = word.lower()
 
                 line_new += word
