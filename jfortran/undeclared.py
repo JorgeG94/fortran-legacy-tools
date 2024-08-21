@@ -118,36 +118,6 @@ def is_common_block(line):
     Checks if a line is declaring a common block.
     """
     return bool(re.match(r'^\s*common\s*/', line, re.IGNORECASE))
-def is_fortran_keyword(word):
-    """
-    Checks if a word is a Fortran keyword, logical operator, or format specifier to avoid false positives.
-    """
-    fortran_keywords = {
-        'do', 'if', 'then', 'else', 'elseif', 'end', 'subroutine', 'function', 'program', 'module',
-        'use', 'call', 'continue', 'return', 'stop', 'print', 'write', 'read', 'format', 'go', 'to',
-        'parameter', 'common', 'dimension', 'logical', 'integer', 'real', 'character', 'complex',
-        'double', 'precision', 'implicit', 'none', 'data', 'contains', 'external', 'intrinsic'
-    }
-    
-    # Add logical operators and other intrinsic functions
-    fortran_logical_operators = {
-        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.', '.true.', '.false.', 'abrt',
-        'endif', 'goto', 'ifdef'
-    }
-    
-    # Add format specifiers (common ones, you can extend this as needed)
-    fortran_format_specifiers = {
-        'i', 'f', 'e', 'g', 'a', 'l', 'd', 'x', '1x', 'h'
-    }
-    
-    # Combine all keywords, logical operators, and format specifiers
-    all_fortran_keywords = fortran_keywords.union(fortran_logical_operators)
-
-    # Check if the word matches a format specifier with a number (like i8, f12.5, etc.)
-    if any(word.lower().startswith(fmt) and word.lower()[len(fmt):].isdigit() for fmt in fortran_format_specifiers):
-        return True
-
-    return word.lower() in all_fortran_keywords
 
 def check_proper_type_declaration(declared_variables, common_blocks, parameter_variables, data_initializations):
     """
@@ -168,4 +138,34 @@ def check_proper_type_declaration(declared_variables, common_blocks, parameter_v
             missing_declarations.add(var)
 
     return missing_declarations
+def is_fortran_keyword(word):
+    """
+    Checks if a word is a Fortran keyword, logical operator, or format specifier to avoid false positives.
+    """
+    # Fortran keywords
+    fortran_keywords = {
+        'do', 'if', 'then', 'else', 'elseif', 'end', 'subroutine', 'function', 'program', 'module',
+        'use', 'call', 'continue', 'return', 'stop', 'print', 'write', 'read', 'format', 'go', 'to',
+        'parameter', 'common', 'dimension', 'logical', 'integer', 'real', 'character', 'complex',
+        'double', 'precision', 'implicit', 'none', 'data', 'contains', 'external', 'intrinsic', 'endif'
+    }
+
+    # Logical operators
+    fortran_logical_operators = {
+        '.and.', '.or.', '.not.', '.eq.', '.ne.', '.lt.', '.le.', '.gt.', '.ge.', '.eqv.', '.neqv.', '.true.', '.false.'
+    }
+
+    # Combine keywords and logical operators
+    all_fortran_keywords = fortran_keywords.union(fortran_logical_operators)
+
+    # Check if the word matches format specifiers with numbers (like i8, f12.5, etc.)
+    format_specifiers = {'i', 'f', 'e', 'g', 'a', 'l', 'd', 'x', '1x', 'h'}
+    if word.lower() in format_specifiers:
+        return False  # Exclude basic format specifiers from being treated as keywords
+
+    # Check if the word starts with a format specifier and is followed by digits
+    if any(word.lower().startswith(fmt) and word[len(fmt):].isdigit() for fmt in format_specifiers):
+        return False  # Exclude format specifiers with numbers
+
+    return word.lower() in all_fortran_keywords
 
