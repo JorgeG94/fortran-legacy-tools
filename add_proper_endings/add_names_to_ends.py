@@ -70,7 +70,6 @@ def process_fortran_file(filepath):
     with open(filepath, 'w') as file:
         file.writelines(modified_lines)
 
-
 def replace_generic_end(filepath):
     with open(filepath, 'r') as file:
         lines = file.readlines()
@@ -86,7 +85,6 @@ def replace_generic_end(filepath):
 
     for line in lines:
         subroutine_match = re.match(r'^(\s*)subroutine\s+(\w+)', line, re.IGNORECASE)
-        # Updated to match functions with a type prefix
         function_match = re.match(r'^(\s*)((?:integer|real|double\s+precision|logical|character)\s+)?function\s+(\w+)', line, re.IGNORECASE)
         module_match = re.match(r'^(\s*)module\s+(?!procedure\b)(\w+)', line, re.IGNORECASE)
         generic_end_match = re.match(r'^(\s*)end\s*$', line, re.IGNORECASE)
@@ -94,21 +92,17 @@ def replace_generic_end(filepath):
         if subroutine_match:
             inside_subroutine = True
             inside_function = False
-            inside_module = False
             current_subroutine_name = subroutine_match.group(2)
             current_indent = subroutine_match.group(1)
 
         if function_match:
             inside_function = True
             inside_subroutine = False
-            inside_module = False
             current_function_name = function_match.group(3)
             current_indent = function_match.group(1)
 
         if module_match:
             inside_module = True
-            inside_subroutine = False
-            inside_function = False
             current_module_name = module_match.group(2)
             current_indent = module_match.group(1)
 
@@ -119,7 +113,7 @@ def replace_generic_end(filepath):
             elif inside_function:
                 line = f'{generic_end_match.group(1)}end function {current_function_name}\n'
                 inside_function = False
-            elif inside_module:
+            elif inside_module and not (inside_subroutine or inside_function):
                 line = f'{generic_end_match.group(1)}end module {current_module_name}\n'
                 inside_module = False
 
@@ -127,6 +121,10 @@ def replace_generic_end(filepath):
 
     with open(filepath, 'w') as file:
         file.writelines(modified_lines)
+
+
+
+
 
 
 def process_directory(directory):
